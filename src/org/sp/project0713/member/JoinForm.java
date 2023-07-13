@@ -20,6 +20,7 @@ class JoinForm extends JFrame implements ActionListener{
 	JButton bt_connect; //데이터베이스 접속 버튼
 	JButton bt_regist; //등록버튼 
 	String url="jdbc:mysql://localhost:3306/javase?characterEncoding=utf8";
+	String url2="jdbc:oracle:thin:@localhost:1521:XE";
 
 	//Connection 객체란? 접속 성공을 하면, 그 접속정보를 보유한 객체
 	Connection con=null;
@@ -46,12 +47,27 @@ class JoinForm extends JFrame implements ActionListener{
 
 		setSize(300,400);
 		setVisible(true);
-		setDefaultCloseOperation(EXIT_ON_CLOSE);
+		//setDefaultCloseOperation(EXIT_ON_CLOSE);
 		
 		bt_connect.addActionListener(this);//버튼들과 리스너연결
 		bt_regist.addActionListener(this);//버튼들과 리스너연결
 
 		bt_regist.setEnabled(false);//비활성화
+
+		this.addWindowListener(new WindowAdapter(){
+			public void windowClosing(WindowEvent e){
+				//1) 열려있는 Connection 닫기 
+				if(con !=null){
+					try{
+						con.close();
+					}catch(SQLException e2){
+						e2.printStackTrace();
+					}
+				}
+
+				System.exit(0);//2) 프로세스도 종료
+			}			
+		});
 	}
 	
 	//MySQL DB에 접속을 시도해본다
@@ -62,12 +78,10 @@ class JoinForm extends JFrame implements ActionListener{
 			System.out.println("드라이버 로드 성공");
 
 			//접속을 시도한다 
+			//con=DriverManager.getConnection(url , "root", "1234");
+			
+			con=DriverManager.getConnection(url2,"java","1234");
 
-			//쿼리문 수행을 담당하는 jdbc 객체
-			PreparedStatement pstmt=null;
-
-
-			con=DriverManager.getConnection(url , "root", "1234");
 			if(con==null){
 				System.out.println("접속실패ㅜㅜ");
 			}else{
@@ -86,12 +100,13 @@ class JoinForm extends JFrame implements ActionListener{
 	//등록하기
 	public void regist(){
 		//쿼리문을 수행해보자 
-		String id				= t_id.getText();
+		String id			= t_id.getText();
 		String name		= t_name.getText();
 		String phone		= t_phone.getText();
 
-		String sql="insert into member(id,name,phone) values('xman','엑스맨','018')";
-		PreparedStatement pstmt=null;
+		String sql="insert into member(id,name,phone) values('"+id+"','"+name+"','"+phone+"')";
+		PreparedStatement pstmt=null;//쿼리문 수행을 담당하는 jdbc 객체
+		
 		try{
 			pstmt=con.prepareStatement(sql);
 
@@ -107,17 +122,42 @@ class JoinForm extends JFrame implements ActionListener{
 
 		}catch(SQLException e){
 			e.printStackTrace();
+		}finally{
+			if(pstmt != null){
+				try{
+					pstmt.close();
+				}catch(SQLException e){
+					e.printStackTrace();
+				}
+			}
 		}
 	}
 
+	//오라클에  insert 하기 
+	public void registOracle(){
+		PreparedStatement pstmt=null;
+		String sql="insert into member(member_idx, id, name, phone)";
+		sql=sql+" values(seq_member.nextval, 'batman','bat','011')";
+		
+		try{
+			pstmt = con.prepareStatement(sql); //쿼리문 준비 
+			int result = pstmt.executeUpdate(); //insert 실행 
+			if(result >0){
+				JOptionPane.showMessageDialog(this, "오라클 등록성공");
+			}
+		}catch(SQLException e){
+			e.printStackTrace();
+		}
+
+	}
 
 	public void actionPerformed(ActionEvent e){
 		Object obj = e.getSource();
 
-		if(obj == bt_connect){ //접속버y튼을 누르면
+		if(obj == bt_connect){ //접속버튼을 누르면
 			connect();
 		}else if(obj==bt_regist){//가입버튼을 누르면
-			regist();
+			registOracle();
 		}
 	}
 
